@@ -17,7 +17,7 @@ func getDB() *gorm.DB {
 		db.Create(&Product{
 			Name:    "其他",
 			Price:   1,
-			Barcode: "CC_FOOD_OTHER_PRODUCT",
+			Barcode: "",
 		})
 	}
 

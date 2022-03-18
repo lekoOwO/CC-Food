@@ -64,14 +64,14 @@ type BuyRequest struct {
 }
 
 type OldSystemTransaction struct {
-	CreatedAt int64  `json:"created_at"`
-	DeletedAt *int64 `json:"deleted_at"`
-	Action    string `json:"action"`
-	Amount    uint64 `json:"amount"`
+	CreatedAt float64  `json:"created_at"`
+	DeletedAt *float64 `json:"deleted_at"`
+	Action    string   `json:"action"`
+	Amount    uint64   `json:"amount"`
 }
 
 type OldSystemData struct {
-	User         string                 `json:user`
+	User         string                 `json:"user"`
 	CreatedAt    int64                  `json:"created_at"`
 	Transactions []OldSystemTransaction `json:"transactions"`
 }

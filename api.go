@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"sort"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -308,7 +308,7 @@ func initAPI(db *gorm.DB) *gin.Engine {
 
 				pd := PurchaseDetail{
 					Quantity: brd.Quantity,
-					Total:    product.Price * uint64(brd.Quantity),
+					Total:    product.Price * brd.Quantity,
 					Product:  product,
 				}
 				pds = append(pds, pd)
@@ -352,32 +352,38 @@ func initAPI(db *gorm.DB) *gin.Engine {
 			}
 
 			var purchases []Purchase
-			payments := map[int64]Payment{}
+			payments := map[float64]Payment{}
 			for _, t := range oldSystemData.Transactions {
 				var pd PurchaseDetail
 				pd.Quantity = t.Amount
 				pd.Total = t.Amount
 				pd.Product = defaultProduct
-				pd.CreatedAt = time.Unix(int64(t.CreatedAt), 0)
+				pd.CreatedAt = float64ToTime(t.CreatedAt)
 
 				p := Purchase{
 					PurchaseDetails: []PurchaseDetail{pd},
 				}
 
 				if t.DeletedAt != nil {
-					payment, ok := payments[*t.DeletedAt]
+					deletedAt := *t.DeletedAt
+					payment, ok := payments[deletedAt]
 					if !ok {
 						payment = Payment{}
-						payment.CreatedAt = time.Unix(*t.DeletedAt, 0)
-						payments[*t.DeletedAt] = payment
+						payment.CreatedAt = float64ToTime(deletedAt)
+						payments[deletedAt] = payment
 					}
 					p.Payment = &payment
 				}
 			}
 
-			paymentValues := []Payment{}
-			for _, payment := range payments {
-				paymentValues = append(paymentValues, payment)
+			var paymentKeys []float64
+			var paymentValues []Payment
+			for time := range payments {
+				paymentKeys = append(paymentKeys, time)
+			}
+			sort.Float64s(paymentKeys)
+			for _, time := range paymentKeys {
+				paymentValues = append(paymentValues, payments[time])
 			}
 			user := User{
 				Usernames: []Username{
