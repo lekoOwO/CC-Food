@@ -39,18 +39,23 @@ func initAPI(db *gorm.DB) *gin.Engine {
 		})
 
 		user.POST("/", func(c *gin.Context) {
-			json := make(map[string]interface{})
-			c.BindJSON(&json)
+			type request struct {
+				Usernames   []string `json:"usernames"`
+				DisplayName string   `json:"display_name"`
+			}
+			var data request
+			c.BindJSON(&data)
 
-			usernames := json["usernames"].([]string)
+			var user User
 			var dbUserNames []Username
-			for _, username := range usernames {
+			for _, username := range data.Usernames {
 				dbUserNames = append(dbUserNames, Username{
 					Name: username,
 				})
 			}
-			user := User{
-				Usernames: dbUserNames,
+			user = User{
+				Usernames:   dbUserNames,
+				DisplayName: data.DisplayName,
 			}
 			db.Create(&user)
 
@@ -100,7 +105,7 @@ func initAPI(db *gorm.DB) *gin.Engine {
 				return
 			}
 			username := Username{}
-			if err := db.First(&username, id).Error; err != nil {
+			if err := db.Preload(clause.Associations).Take(&username, id).Error; err != nil {
 				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 				return
 			}
@@ -332,8 +337,8 @@ func initAPI(db *gorm.DB) *gin.Engine {
 		_ = c.ShouldBind(&form)
 
 		var defaultProduct Product
-		if err := db.Take(&defaultProduct, 0); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error})
+		if err := db.Take(&defaultProduct, 1).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -374,6 +379,8 @@ func initAPI(db *gorm.DB) *gin.Engine {
 					}
 					p.Payment = &payment
 				}
+
+				purchases = append(purchases, p)
 			}
 
 			var paymentKeys []float64
@@ -381,18 +388,35 @@ func initAPI(db *gorm.DB) *gin.Engine {
 			for time := range payments {
 				paymentKeys = append(paymentKeys, time)
 			}
+
 			sort.Float64s(paymentKeys)
 			for _, time := range paymentKeys {
 				paymentValues = append(paymentValues, payments[time])
 			}
+
+			// Update Payment reference
+			for i := range purchases {
+				p := &purchases[i]
+				if p.Payment != nil {
+					for j := range paymentValues {
+						p2 := &paymentValues[j]
+						if p2.CreatedAt.Equal(p.Payment.CreatedAt) {
+							p.Payment = p2
+							break
+						}
+					}
+				}
+			}
+
 			user := User{
 				Usernames: []Username{
 					{
 						Name: oldSystemData.User,
 					},
 				},
-				Purchases: purchases,
-				Payments:  paymentValues, // ?
+				DisplayName: oldSystemData.User,
+				Purchases:   purchases,
+				Payments:    paymentValues,
 			}
 
 			db.Create(&user)

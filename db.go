@@ -13,7 +13,7 @@ func getDB() *gorm.DB {
 
 	db.AutoMigrate(&User{}, &Username{}, &Product{}, &Purchase{}, &PurchaseDetail{}, &Payment{})
 
-	if err := db.Take(&Product{}, 0).Error; err != nil {
+	if err := db.Take(&Product{}, 1).Error; err != nil {
 		db.Create(&Product{
 			Name:    "其他",
 			Price:   1,

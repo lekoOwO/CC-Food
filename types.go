@@ -6,10 +6,11 @@ import (
 
 type User struct {
 	gorm.Model
-	Usernames  []Username
-	Purchases  []Purchase
-	Payments   []Payment
-	IsDisabled *bool `gorm:"default:false"`
+	DisplayName string
+	Usernames   []Username
+	Purchases   []Purchase
+	Payments    []Payment
+	IsDisabled  *bool `gorm:"default:false"`
 }
 
 type Username struct {
