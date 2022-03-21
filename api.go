@@ -57,7 +57,11 @@ func initAPI(db *gorm.DB) *gin.Engine {
 				Usernames:   dbUserNames,
 				DisplayName: data.DisplayName,
 			}
-			db.Create(&user)
+
+			if err := db.Create(&user).Error; err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 
 			c.JSON(http.StatusOK, user)
 		})

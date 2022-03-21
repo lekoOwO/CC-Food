@@ -15,7 +15,7 @@ type User struct {
 
 type Username struct {
 	gorm.Model
-	Name   string
+	Name   string `gorm:"unique"`
 	UserID uint64
 	User   User
 }
