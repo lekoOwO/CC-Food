@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -156,7 +158,7 @@ func initAPI(db *gorm.DB) *gin.Engine {
 	{
 		product.GET("/", func(c *gin.Context) {
 			products := []Product{}
-			db.Take(&products, "is_disabled = ?", false)
+			db.Find(&products, "is_disabled = ?", false)
 			c.JSON(http.StatusOK, products)
 		})
 
@@ -178,18 +180,26 @@ func initAPI(db *gorm.DB) *gin.Engine {
 		})
 
 		product.POST("/", func(c *gin.Context) {
-			json := make(map[string]interface{})
-			c.BindJSON(&json)
+			product := Product{}
+			c.BindJSON(&product)
 
-			name := json["name"].(string)
-			price := json["price"].(uint64)
+			setPrivateBarcode := false
 
-			product := Product{
-				Name:  name,
-				Price: price,
+			if product.Barcode == "" {
+				setPrivateBarcode = true
+				product.Barcode = uuid.New().String()
 			}
+
 			db.Create(&product)
 
+			if setPrivateBarcode {
+				if err := db.Model(&product).Updates(map[string]interface{}{
+					"barcode": fmt.Sprintf("%s%d", "CC-Food-", product.ID),
+				}).Error; err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+			}
 			c.JSON(http.StatusOK, product)
 		})
 
@@ -230,17 +240,13 @@ func initAPI(db *gorm.DB) *gin.Engine {
 				return
 			}
 
-			json := make(map[string]interface{})
-			c.BindJSON(&json)
-
-			name := json["name"].(string)
-			price := json["price"].(uint64)
-			barcode := json["barcode"].(string)
+			updateProduct := Product{}
+			c.BindJSON(&updateProduct)
 
 			if err := db.Model(&product).Updates(map[string]interface{}{
-				"name":    name,
-				"price":   price,
-				"barcode": barcode,
+				"name":    updateProduct.Name,
+				"price":   updateProduct.Price,
+				"barcode": updateProduct.Barcode,
 			}).Error; err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
@@ -271,9 +277,14 @@ func initAPI(db *gorm.DB) *gin.Engine {
 			c.JSON(http.StatusOK, purchases)
 		})
 
-		purchase.GET("/notPaid", func(c *gin.Context) {
+		purchase.GET("/notPaid/:id", func(c *gin.Context) {
+			id, err := strconv.Atoi(c.Param("id"))
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 			purchases := []Purchase{}
-			db.Preload("PurchaseDetails").Find(&purchases, "payment_id = ?", nil)
+			db.Preload("PurchaseDetails").Find(&purchases, "user_id = ? AND payment_id IS NULL", id)
 			c.JSON(http.StatusOK, purchases)
 		})
 
@@ -329,6 +340,35 @@ func initAPI(db *gorm.DB) *gin.Engine {
 			}
 			db.Create(&purchase)
 			c.JSON(http.StatusOK, purchase)
+		})
+
+		purchase.POST("/pay", func(c *gin.Context) {
+			data := struct {
+				UserID      uint64   `json:"user_id"`
+				PurchaseIDs []uint64 `json:"purchase_ids"`
+			}{}
+			c.BindJSON(&data)
+
+			user := User{}
+			if err := db.Take(&user, data.UserID).Error; err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			payment := Payment{
+				User:      user,
+				Purchases: []Purchase{},
+			}
+			for _, id := range data.PurchaseIDs {
+				purchase := Purchase{}
+				if err := db.Take(&purchase, "id = ? AND payment_id IS NULL", id).Error; err != nil {
+					c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+					return
+				}
+				payment.Purchases = append(payment.Purchases, purchase)
+			}
+
+			db.Create(&payment)
+			c.JSON(http.StatusOK, payment)
 		})
 	}
 

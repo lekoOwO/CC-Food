@@ -22,10 +22,10 @@ type Username struct {
 
 type Product struct {
 	gorm.Model
-	Name       string
-	Price      uint64
-	Barcode    string
-	IsDisabled *bool `gorm:"default:false"`
+	Name       string `json:"name"`
+	Price      uint64 `json:"price"`
+	Barcode    string `gorm:"unique" json:"barcode"`
+	IsDisabled *bool  `gorm:"default:false"`
 }
 
 type Purchase struct {
