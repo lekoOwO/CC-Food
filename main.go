@@ -1,7 +1,9 @@
 package main
 
+import "os"
+
 func main() {
 	db := getDB()
 	r := initAPI(db)
-	r.Run("172.21.192.1:8080")
+	r.Run(os.Getenv("CC_FOOD_API"))
 }
