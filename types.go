@@ -55,7 +55,7 @@ type Payment struct {
 }
 
 type BuyRequestDetail struct {
-	ProductID int64
+	ProductID uint64
 	Quantity  int64
 }
 
