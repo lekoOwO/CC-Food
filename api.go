@@ -395,7 +395,7 @@ func initAPI(db *gorm.DB) *gin.Engine {
 			json.Unmarshal(file, &oldSystemData)
 
 			username := Username{}
-			if err := db.Preload("User").Take(&username, "name = ?", c.Param("username")).Error; err == nil {
+			if err := db.Preload("User").Take(&username, "name = ?", oldSystemData.User).Error; err == nil {
 				// username found, ignore.
 				continue
 			}
