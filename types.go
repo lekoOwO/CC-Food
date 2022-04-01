@@ -23,7 +23,7 @@ type Username struct {
 type Product struct {
 	gorm.Model
 	Name       string `json:"name"`
-	Price      uint64 `json:"price"`
+	Price      int64 `json:"price"`
 	Barcode    string `gorm:"unique" json:"barcode"`
 	IsDisabled *bool  `gorm:"default:false"`
 }
@@ -39,8 +39,8 @@ type Purchase struct {
 
 type PurchaseDetail struct {
 	gorm.Model
-	Quantity   uint64
-	Total      uint64
+	Quantity   int64
+	Total      int64
 	ProductID  uint64
 	Product    Product
 	PurchaseID uint64
@@ -55,8 +55,8 @@ type Payment struct {
 }
 
 type BuyRequestDetail struct {
-	ProductID uint64
-	Quantity  uint64
+	ProductID int64
+	Quantity  int64
 }
 
 type BuyRequest struct {
@@ -68,7 +68,7 @@ type OldSystemTransaction struct {
 	CreatedAt float64  `json:"created_at"`
 	DeletedAt *float64 `json:"deleted_at"`
 	Action    string   `json:"action"`
-	Amount    uint64   `json:"amount"`
+	Amount    int64   `json:"amount"`
 }
 
 type OldSystemData struct {
