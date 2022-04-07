@@ -277,6 +277,14 @@ func initAPI(db *gorm.DB) *gin.Engine {
 			c.JSON(http.StatusOK, purchases)
 		})
 
+		purchase.GET("/notPaid", func(c *gin.Context) {
+			var response struct {
+				Purchases []Purchase `json:"purchases"`
+			}
+			db.Preload("PurchaseDetails").Find(&response.Purchases, "payment_id IS NULL")
+			c.JSON(http.StatusOK, response)
+		})
+
 		purchase.GET("/notPaid/:id", func(c *gin.Context) {
 			id, err := strconv.Atoi(c.Param("id"))
 			if err != nil {
